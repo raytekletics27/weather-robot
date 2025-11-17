@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "<your-Azure-storage-connection-string-here>",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "WEATHER_LAT": "38.8895",
+    "WEATHER_LON": "-77.0353",
+    "TIMER_SCHEDULE": "0 0 * * * *",
+    "WEATHER_USER_AGENT": "wxdemo/1.0 (your.email@example.com)"
+  }
+}

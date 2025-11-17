@@ -55,3 +55,70 @@ Purpose: Help AI coding agents become productive quickly in this repository by d
 - Where are secrets stored for deployments (Azure Key Vault, AWS Secrets Manager, GitHub Actions secrets)?
 
 If anything in this file is unclear or you want agent guidance to be extended (for example adding example CI workflows or a local run script), tell me which cloud/runtime and I will update this document accordingly.
+
+**Concrete Example: Python runtime + Azure Functions**
+
+- Recommended function layout for a simple HTTP-triggered Python function:
+  - `function/FetchWeather/function_app/__init__.py` -- contains the function handler (or use the Azure Functions function structure with a folder per function)
+  - `function/FetchWeather/requirements.txt` -- Python dependencies
+  - `function/FetchWeather/host.json` and `function/FetchWeather/local.settings.json` (local settings; do NOT check secrets into repo)
+
+- Minimal `requirements.txt` example:
+  - `azure-functions==1.10.0`
+  - `requests`
+
+- Local run/debug tips:
+  - Install Azure Functions Core Tools and Python v3.8+ (match your target runtime). Run: `func start` inside the function folder.
+  - Use `local.settings.json` for local secrets; never commit this file. Add required secrets to GitHub Actions or Azure Key Vault for deployments.
+
+- Secrets and deployment:
+  - For GitHub Actions deploys we recommend storing the function publish profile in the secret `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` (or use `AZURE_CREDENTIALS` for service principal deployment).
+
+**Example GitHub Actions workflow (deploy to Azure Functions)**
+
+Below is a minimal CI workflow you can place in `.github/workflows/deploy-azure-function.yml`. It installs Python, installs dependencies, runs any tests, and deploys the function using the publish profile stored in the repository secret `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`.
+
+```yaml
+name: Deploy Azure Function (Python)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        working-directory: ./function/FetchWeather
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: ./function/FetchWeather
+        run: |
+          # add your test command here (example using pytest)
+          if [ -f pytest.ini ]; then pytest -q; fi
+
+      - name: Deploy to Azure Functions
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }} # set this secret in repo settings
+          package: './function/FetchWeather'
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+
+```
+
+Notes:
+- Replace `secrets.AZURE_FUNCTIONAPP_NAME` and `secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE` with repository secrets. The publish profile is obtained from the Azure portal (Function App -> Get publish profile).
+- If you prefer to use a service principal, create `AZURE_CREDENTIALS` and use the `azure/login` action to authenticate prior to deployment.
+
+If you want, I can add the example workflow file to the repo and create a small Python function skeleton under `function/FetchWeather/` so the workflow can be exercised locally. Tell me which Python minor version to target (e.g., `3.10`), and whether to scaffold an HTTP-triggered function or a timer-triggered one.
